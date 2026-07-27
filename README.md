@@ -14,6 +14,7 @@ Requires Python 3.11 or newer:
 python3 -m venv .venv
 .venv/bin/pip install -e .
 .venv/bin/access --help
+.venv/bin/access --version
 ```
 
 The registry defaults to `~/.config/access`. Select another absolute,
