@@ -1,0 +1,5 @@
+schema_version = 1
+kind = "composite"
+name = "development"
+description = "Example composite whose policy is derived from its leaves"
+includes = ["github-dev"]

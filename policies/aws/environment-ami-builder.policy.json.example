@@ -1,0 +1,20 @@
+{
+  "_notice": "SANITIZED TEMPLATE ONLY. Replace placeholders outside this repository and review least privilege before host deployment.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ExampleDescribeOnly",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeImages",
+        "ec2:DescribeInstances"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "EXAMPLE_REGION"
+        }
+      }
+    }
+  ]
+}

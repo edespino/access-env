@@ -1,0 +1,15 @@
+# Illustrative only: fake identifiers intentionally do not pass the host policy.
+schema_version = 1
+kind = "leaf"
+auth_kind = "aws-assume-role"
+name = "example-aws-build"
+description = "Fake AWS assume-role schema example"
+providers = ["aws"]
+capabilities = ["artifact-build"]
+risk = "build"
+identity_probe = "aws-caller"
+interactive = false
+max_duration_seconds = 7200
+role_arn = "arn:aws:iam::000000000000:role/example-ami-builder"
+region = "us-east-1"
+session_duration_seconds = 3600

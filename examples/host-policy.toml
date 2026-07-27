@@ -1,0 +1,9 @@
+# SANITIZED EXAMPLE ONLY. Production always loads /etc/access-env/host-policy.toml.
+schema_version = 1
+
+[[aws_assume_roles]]
+role_arn = "arn:aws:iam::111122223333:role/example-build-role"
+region = "us-east-1"
+profile_name = "access-example-build"
+session_duration_seconds = 3600
+max_command_duration_seconds = 14400

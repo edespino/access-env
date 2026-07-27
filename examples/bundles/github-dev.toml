@@ -1,0 +1,21 @@
+schema_version = 1
+kind = "leaf"
+auth_kind = "onepassword"
+name = "github-dev"
+description = "Example read-only GitHub development identity"
+providers = ["github"]
+capabilities = ["repository-read"]
+risk = "development"
+env_files = ["env/github-dev.env"]
+clear_variables = []
+identity_probe = "github-user"
+interactive = false
+max_duration_seconds = 900
+
+[service_account]
+account = "example.1password.com"
+vaults = ["Development"]
+
+[[injected_files]]
+template = "templates/github-config.tpl"
+target_env = "EXAMPLE_GITHUB_CONFIG"
