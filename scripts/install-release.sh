@@ -242,20 +242,60 @@ PY
 # completed directory remains functional after its atomic rename.
 /usr/bin/env -i PATH="$PATH" HOME="$HOME" /usr/bin/python3 -I -S - \
   "$staging_release" "$final_release" <<'PY'
-import pathlib, stat, sys
+import pathlib, re, stat, sys
 staging = pathlib.Path(sys.argv[1])
 final = pathlib.Path(sys.argv[2])
-old = f"#!{staging}/bin/python".encode()
-new = f"#!{final}/bin/python".encode()
+old_bin = f"{staging}/bin/".encode()
+new_bin = f"{final}/bin/".encode()
+interpreter = rb"python(?:3(?:\.[0-9]+)?)?"
+direct = re.compile(
+    rb"\A#!" + re.escape(old_bin) + rb"(" + interpreter + rb")([^\r\n]*)\Z"
+)
+trampoline = re.compile(
+    rb"\A'''exec' (\"?)" + re.escape(old_bin) + rb"("
+    + interpreter + rb")\1 \"\$0\" \"\$@\"\n\Z"
+)
+access_rewritten = False
 for path in (staging / "bin").iterdir():
     result = path.lstat()
     if not stat.S_ISREG(result.st_mode):
         continue
     content = path.read_bytes()
     first, separator, remainder = content.partition(b"\n")
-    if first.startswith(old):
-        path.write_bytes(new + first[len(old):] + separator + remainder)
-        path.chmod(stat.S_IMODE(result.st_mode))
+    direct_match = direct.fullmatch(first)
+    if direct_match:
+        rewritten = (
+            b"#!" + new_bin + direct_match.group(1) + direct_match.group(2)
+            + separator + remainder
+        )
+    else:
+        lines = content.splitlines(keepends=True)
+        trampoline_match = (
+            trampoline.fullmatch(lines[1]) if len(lines) >= 3 else None
+        )
+        if (
+            trampoline_match
+            and lines[0] == b"#!/bin/sh\n"
+            and lines[2].rstrip(b"\r\n") == b"' '''"
+        ):
+            replacement = (
+                b"'''exec' " + trampoline_match.group(1) + new_bin
+                + trampoline_match.group(2) + trampoline_match.group(1)
+                + b' "$0" "$@"\n'
+            )
+            rewritten = lines[0] + replacement + b"".join(lines[2:])
+        elif old_bin in content or path.name == "access":
+            raise SystemExit(f"unsupported generated launcher form: {path.name}")
+        else:
+            continue
+    if old_bin in rewritten:
+        raise SystemExit(f"launcher relocation failed: {path.name}")
+    path.write_bytes(rewritten)
+    path.chmod(stat.S_IMODE(result.st_mode))
+    if path.name == "access":
+        access_rewritten = True
+if not access_rewritten:
+    raise SystemExit("access launcher was not relocated")
 PY
 /bin/chmod 0755 "$staging_release"
 validate_release "$staging_release"

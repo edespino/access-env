@@ -126,6 +126,11 @@ class PackagingTests(unittest.TestCase):
                 capture_output=True, text=True,
             )
             self.assertEqual(smoke.returncode, 0, smoke.stderr)
+            self.assertNotEqual(
+                (release / "bin/access").read_bytes().splitlines()[0],
+                b"#!/bin/sh",
+                "short-path install unexpectedly used the long-path launcher",
+            )
             self.assertEqual(
                 os.readlink(destdir / "opt/access-env/current"),
                 "/opt/access-env/releases/0.1.0",
@@ -138,6 +143,12 @@ class PackagingTests(unittest.TestCase):
                 list((destdir / "opt/access-env/releases").glob(".install-*")),
                 [],
             )
+
+            rollback = subprocess.run(
+                [installer, "--rollback", "0.1.0"], env=environment,
+                check=False, capture_output=True, text=True,
+            )
+            self.assertEqual(rollback.returncode, 0, rollback.stderr)
 
             release.chmod(0o775)
             rollback = subprocess.run(
@@ -165,3 +176,46 @@ class PackagingTests(unittest.TestCase):
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("unsafe symlink", result.stderr)
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "release installer requires Linux")
+    def test_release_installer_relocates_long_path_console_launcher(self) -> None:
+        project = Path(__file__).parents[1]
+        installer = project / "scripts/install-release.sh"
+        with tempfile.TemporaryDirectory(dir="/dev/shm") as temporary:
+            root = Path(temporary)
+            wheel_dir = root / "wheel"
+            wheel_dir.mkdir()
+            build = subprocess.run(
+                [
+                    "/usr/bin/python3", "-m", "pip", "wheel", "--no-deps",
+                    "--no-build-isolation", "--wheel-dir", wheel_dir, project,
+                ],
+                check=False, capture_output=True, text=True,
+            )
+            self.assertEqual(build.returncode, 0, build.stderr)
+            wheel = wheel_dir / "access_env-0.1.0-py3-none-any.whl"
+            digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
+            destdir = root / ("long-destination-" + "x" * 120)
+            destdir.mkdir(mode=0o700)
+            environment = {**os.environ, "DESTDIR": str(destdir)}
+
+            install = subprocess.run(
+                [installer, wheel, "0.1.0", digest],
+                env=environment, check=False, capture_output=True, text=True,
+            )
+            self.assertEqual(install.returncode, 0, install.stderr)
+            release = destdir / "opt/access-env/releases/0.1.0"
+            launcher = release / "bin/access"
+            smoke = subprocess.run(
+                [launcher, "--help"], check=False,
+                capture_output=True, text=True,
+            )
+            self.assertEqual(
+                smoke.returncode, 0,
+                f"{smoke.stderr}\nlauncher={launcher.read_bytes()!r}",
+            )
+            self.assertNotIn(
+                b".install-0.1.0-",
+                launcher.read_bytes(),
+                "launcher still references the deleted staging release",
+            )
