@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/edespino/access-env/security/advisories/new
+    about: Do not disclose vulnerabilities, credentials, secret references, or sensitive logs in a public issue.
