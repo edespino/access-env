@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a reproducible defect that is safe to discuss publicly
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve access-env.
+
+        Do not include credentials, live bundle contents, `op://` references,
+        account identifiers, tokens, keys, environment dumps, or private logs.
+        Report suspected vulnerabilities through the private Security Advisory
+        link instead of this form.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Provide minimal, sanitized steps using only fake values.
+      placeholder: |
+        1. Install access-env version ...
+        2. Create a sanitized bundle ...
+        3. Run ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: access-env version or commit
+      placeholder: v0.1.0 or full commit SHA
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      placeholder: Distribution, Python version, and systemd version
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Include only output you have checked for secrets and private identifiers.
+      render: shell
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I removed credentials, secret references, account identifiers, private paths, and sensitive logs.
+          required: true
+        - label: This is not a suspected security vulnerability.
+          required: true
