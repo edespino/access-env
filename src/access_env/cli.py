@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from importlib import metadata
 import os
 from pathlib import Path
 import sys
@@ -9,10 +10,27 @@ from .bundles import Bundle, BundleError, BundleRegistry, default_root
 from .execution import ExecutionError, run_bundle
 
 
+class _VersionAction(argparse.Action):
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: object,
+        option_string: str | None = None,
+    ) -> None:
+        print(f"{parser.prog} {metadata.version('access-env')}")
+        parser.exit()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="access",
         description="Inspect trusted development-access bundle configuration.",
+    )
+    parser.add_argument(
+        "--version",
+        action=_VersionAction,
+        nargs=0,
     )
     parser.add_argument(
         "--config-root",

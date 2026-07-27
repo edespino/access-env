@@ -12,7 +12,11 @@ def run_cli(
     *args: str, environment: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy() if environment is None else environment.copy()
-    env["PYTHONPATH"] = str(Path(__file__).parents[1] / "src")
+    python_path = []
+    if env.get("PYTHONPATH"):
+        python_path.append(env["PYTHONPATH"])
+    python_path.append(str(Path(__file__).parents[1] / "src"))
+    env["PYTHONPATH"] = os.pathsep.join(python_path)
     return subprocess.run(
         [sys.executable, "-m", "access_env.cli", *args],
         capture_output=True,
@@ -23,6 +27,24 @@ def run_cli(
 
 
 class CliTests(unittest.TestCase):
+    def test_version_does_not_load_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            metadata_root = Path(temporary) / "metadata"
+            distribution = metadata_root / "access_env-9.8.7.dist-info"
+            distribution.mkdir(parents=True)
+            (distribution / "METADATA").write_text(
+                "Metadata-Version: 2.1\n"
+                "Name: access-env\n"
+                "Version: 9.8.7\n"
+            )
+            result = run_cli(
+                "--version",
+                environment={"HOME": temporary, "PYTHONPATH": str(metadata_root)},
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "access 9.8.7\n")
+
     def make_registry(self) -> tuple[tempfile.TemporaryDirectory[str], Path]:
         temporary = tempfile.TemporaryDirectory()
         root = Path(temporary.name)
@@ -80,6 +102,22 @@ target_env = "PROVIDER_CONFIG"
         self.assertNotIn("use", result.stdout)
         self.assertNotIn("--op-executable", result.stdout)
         self.assertNotIn("--bootstrap-token-file", result.stdout)
+
+    def test_help_does_not_look_up_distribution_version(self) -> None:
+        from contextlib import redirect_stdout
+        import io
+        from unittest import mock
+        from access_env import cli
+
+        with mock.patch(
+            "access_env.cli.metadata.version",
+            side_effect=AssertionError("version lookup was eager"),
+        ):
+            with redirect_stdout(io.StringIO()):
+                with self.assertRaises(SystemExit) as exit_context:
+                    cli.main(["--help"])
+
+        self.assertEqual(exit_context.exception.code, 0)
 
     def test_run_requires_separator_and_propagates_exit_without_logging_arguments(self) -> None:
         from contextlib import redirect_stderr, redirect_stdout

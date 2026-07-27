@@ -49,6 +49,14 @@ class PackagingTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("list", result.stdout)
             self.assertIn("status", result.stdout)
+            version = subprocess.run(
+                [environment / "bin/access", "--version"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(version.returncode, 0, version.stderr)
+            self.assertEqual(version.stdout, "access 0.1.1\n")
 
     @unittest.skipUnless(sys.platform.startswith("linux"), "release installer requires Linux")
     def test_release_installer_uses_digest_and_safe_destdir(self) -> None:
@@ -67,7 +75,7 @@ class PackagingTests(unittest.TestCase):
                 check=False, capture_output=True, text=True,
             )
             self.assertEqual(build.returncode, 0, build.stderr)
-            wheel = wheel_dir / "access_env-0.1.0-py3-none-any.whl"
+            wheel = wheel_dir / "access_env-0.1.1-py3-none-any.whl"
             digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
             destdir = root / "dest"
             destdir.mkdir(mode=0o700)
@@ -88,18 +96,18 @@ class PackagingTests(unittest.TestCase):
             )
 
             bad = subprocess.run(
-                [installer, wheel, "0.1.0", "0" * 64], cwd=hostile_cwd,
+                [installer, wheel, "0.1.1", "0" * 64], cwd=hostile_cwd,
                 env=environment, check=False, capture_output=True, text=True,
             )
             self.assertNotEqual(bad.returncode, 0)
-            self.assertFalse((destdir / "opt/access-env/releases/0.1.0").exists())
+            self.assertFalse((destdir / "opt/access-env/releases/0.1.1").exists())
 
             process = subprocess.Popen(
-                [installer, wheel, "0.1.0", digest], cwd=hostile_cwd,
+                [installer, wheel, "0.1.1", digest], cwd=hostile_cwd,
                 env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 text=True,
             )
-            final_release = destdir / "opt/access-env/releases/0.1.0"
+            final_release = destdir / "opt/access-env/releases/0.1.1"
             incomplete_release_published = False
             while process.poll() is None:
                 if final_release.exists():
@@ -120,7 +128,7 @@ class PackagingTests(unittest.TestCase):
                 "installer exposed an incomplete final release",
             )
             self.assertFalse(marker.exists())
-            release = destdir / "opt/access-env/releases/0.1.0"
+            release = destdir / "opt/access-env/releases/0.1.1"
             smoke = subprocess.run(
                 [release / "bin/access", "--help"], check=False,
                 capture_output=True, text=True,
@@ -133,7 +141,7 @@ class PackagingTests(unittest.TestCase):
             )
             self.assertEqual(
                 os.readlink(destdir / "opt/access-env/current"),
-                "/opt/access-env/releases/0.1.0",
+                "/opt/access-env/releases/0.1.1",
             )
             self.assertEqual(
                 os.readlink(destdir / "usr/local/bin/access"),
@@ -145,14 +153,14 @@ class PackagingTests(unittest.TestCase):
             )
 
             rollback = subprocess.run(
-                [installer, "--rollback", "0.1.0"], env=environment,
+                [installer, "--rollback", "0.1.1"], env=environment,
                 check=False, capture_output=True, text=True,
             )
             self.assertEqual(rollback.returncode, 0, rollback.stderr)
 
             release.chmod(0o775)
             rollback = subprocess.run(
-                [installer, "--rollback", "0.1.0"], env=environment,
+                [installer, "--rollback", "0.1.1"], env=environment,
                 check=False, capture_output=True, text=True,
             )
             self.assertNotEqual(rollback.returncode, 0)
@@ -193,18 +201,18 @@ class PackagingTests(unittest.TestCase):
                 check=False, capture_output=True, text=True,
             )
             self.assertEqual(build.returncode, 0, build.stderr)
-            wheel = wheel_dir / "access_env-0.1.0-py3-none-any.whl"
+            wheel = wheel_dir / "access_env-0.1.1-py3-none-any.whl"
             digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
             destdir = root / ("long-destination-" + "x" * 120)
             destdir.mkdir(mode=0o700)
             environment = {**os.environ, "DESTDIR": str(destdir)}
 
             install = subprocess.run(
-                [installer, wheel, "0.1.0", digest],
+                [installer, wheel, "0.1.1", digest],
                 env=environment, check=False, capture_output=True, text=True,
             )
             self.assertEqual(install.returncode, 0, install.stderr)
-            release = destdir / "opt/access-env/releases/0.1.0"
+            release = destdir / "opt/access-env/releases/0.1.1"
             launcher = release / "bin/access"
             smoke = subprocess.run(
                 [launcher, "--help"], check=False,
@@ -215,7 +223,7 @@ class PackagingTests(unittest.TestCase):
                 f"{smoke.stderr}\nlauncher={launcher.read_bytes()!r}",
             )
             self.assertNotIn(
-                b".install-0.1.0-",
+                b".install-0.1.1-",
                 launcher.read_bytes(),
                 "launcher still references the deleted staging release",
             )
