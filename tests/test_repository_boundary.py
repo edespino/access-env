@@ -89,7 +89,7 @@ class RepositoryBoundaryTests(unittest.TestCase):
 
     def test_public_repository_has_license_and_private_reporting_path(self) -> None:
         license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
-        security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+        security = (ROOT / ".github" / "SECURITY.md").read_text(encoding="utf-8")
         project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
         self.assertIn("Apache License", license_text)
         self.assertIn("Version 2.0, January 2004", license_text)
